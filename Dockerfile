@@ -9,7 +9,8 @@ RUN pip install flask_sqlalchemy
 # Copiar el resto del código
 COPY . .
 EXPOSE 5000
-CMD [ "python", "app.py" ]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+
 #CMD sh -c "gunicorn --bind 0.0.0.0:8081 --workers 4 --forwarded-allow-ips=*  wsgi:app"
 
 #pip freeze > requirements.txt
