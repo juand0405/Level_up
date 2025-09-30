@@ -1,10 +1,34 @@
+sversion: "3.9"
+
 services:
   web:
-    image: python:3.13-alpine
-    build: 
-      context: . #"https://github.com/miuguelt/HolaDocker.git"
-      dockerfile: Dockerfile
+    build: .
+    container_name: flask_app
+    command: gunicorn --bind 0.0.0.0:5000 app:app
     ports:
-      - 5000:5000
+      - "5000:5000"
+    environment:
+      DATABASE_URL: mysql+pymysql://flask_user:flask_password@db:3306/flask_db
+      SECRET_KEY: supersecretkey
+      MAIL_USERNAME: david22guerreroml@gmail.com
+      MAIL_PASSWORD: akkgsgpjgsqeqfyb
+      MAIL_DEFAULT_SENDER: david22guerreroml@gmail.com
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: flask_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: flask_db
+      MYSQL_USER: flask_user
+      MYSQL_PASSWORD: flask_password
+    ports:
+      - "3311:3306"
     volumes:
-      - .:/app
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
