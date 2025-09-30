@@ -1,17 +1,27 @@
-FROM python:3.13-alpine 
-# Establecer el directorio de trabajo
+FROM python:3.13-alpine
+
+# Variables para no generar archivos .pyc y salida sin buffer
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Directorio de trabajo
 WORKDIR /app
-# Copiar requirements.txt e instalar dependencias
+
+# Instalar dependencias del sistema necesarias
+RUN apk add --no-cache gcc musl-dev libffi-dev
+
+# Copiar requirements e instalar dependencias
 COPY requirements.txt .
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
-RUN pip install flask
-RUN pip install flask_sqlalchemy 
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir gunicorn
+
 # Copiar el resto del código
 COPY . .
+
+# Exponer el puerto que usará Flask
 EXPOSE 5000
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
 
-#CMD sh -c "gunicorn --bind 0.0.0.0:8081 --workers 4 --forwarded-allow-ips=*  wsgi:app"
+# Comando por defecto para arrancar la app
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
 
-#pip freeze > requirements.txt
-#py app.py
