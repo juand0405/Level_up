@@ -5,28 +5,27 @@ services:
     build: .
     container_name: flask_app
     command: gunicorn --bind 0.0.0.0:5000 app:app
-    ports:
-      - "5000:5000"
+    restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://flask_user:flask_password@db:3306/flask_db
-      SECRET_KEY: supersecretkey
-      MAIL_USERNAME: david22guerreroml@gmail.com
-      MAIL_PASSWORD: akkgsgpjgsqeqfyb
-      MAIL_DEFAULT_SENDER: david22guerreroml@gmail.com
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_DEFAULT_SENDER: ${MAIL_DEFAULT_SENDER}
     depends_on:
       - db
+    ports:
+      - "5000:5000"
 
   db:
     image: mysql:8.0
     container_name: flask_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: flask_db
-      MYSQL_USER: flask_user
-      MYSQL_PASSWORD: flask_password
-    ports:
-      - "3311:3306"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
 
