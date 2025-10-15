@@ -1,69 +1,81 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 <div class="form-container">
-    <h2>Realizar Donación</h2>
-    <form method="POST" action="{{ url_for('donaciones') }}">
-        <div class="form-group">
-            <label for="creator_id">Donar a Creador:</label>
-            <select id="creator_id" name="creator_id" class="form-control" required>
-                <option value="">Selecciona un creador</option>
-                {% for creator in creators %}
-                    <option value="{{ creator.id }}" {% if preselected_creator_id and preselected_creator_id == creator.id|string %}selected{% endif %}>
-                        {{ creator.username }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+ <h2>Realizar Donación</h2>
+<form method="POST"> 
+ <div class="form-group"><label for="creator_id">Donar a Creador:</label>
+ <select id="creator_id" name="creator_id" class="form-control" required>
+ <option value="">Selecciona un creador</option>
 
-        <div class="form-group">
-            <label for="game_id">Donar por Juego (opcional):</label>
-            <select id="game_id" name="game_id" class="form-control">
-                <option value="">Selecciona un juego (si aplica)</option>
-                {% for game in games %}
-                    <option value="{{ game.id }}" {% if preselected_game_id and preselected_game_id == game.id|string %}selected{% endif %}>
-                        {{ game.name }} (de {{ game.creator.username }})
-                    </option>
-                {% endfor %}
-            </select>
-            <small>Si seleccionas un juego, la donación irá a su creador.</small>
-        </div>
+{% for creator in creators %}
+ <option value="{{ creator.id }}" {% if preselected_creator_id and preselected_creator_id == creator.id|string %}selected{% endif %}>
+ {{ creator.username }}
+ </option>
+ {% endfor %}
+ </select>
+ </div>
 
-        <div class="form-group">
-            <label for="amount">Monto de la Donación:</label>
-            <input type="number" id="amount" name="amount" step="0.01" min="1" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Donar</button>
-        <a href="{{ url_for('home_usuario') }}" class="btn btn-secondary">Cancelar</a>
-    </form>
+ <div class="form-group">
+    <label for="game_id">Donar por Juego (opcional):</label>
+     <select id="game_id" name="game_id" class="form-control">
+        <option value="">Ninguno</option>
+{% for game in games %}
+    <option value="{{ game.id }}" {% if preselected_game_id and preselected_game_id == game.id|string %}selected{% endif %}>
+        {{ game.name }} (de {{ game.creator.username }})
+        </option>
+ {% endfor %}
+ </select>
+ <small>Si seleccionas un juego, la donación se dirigirá automáticamente a su creador.</small>
+ </div>
+
+<div class="form-group">
+ <label for="amount">Monto de la Donación (COP):</label>
+ <input type="number" id="amount" name="amount" step="100" min="100" class="form-control" required>
+ </div>
+ <button type="submit" class="btn btn-primary">Pagar y Donar</button>
+ <a href="{{ url_for('home_usuario') }}" class="btn btn-secondary">Cancelar</a>     </form>
 </div>
 
+<script type="text/javascript" src="https://checkout.wompi.co/widget.js" ></script>
+
 <script>
+     // 1. Obtener el JSON de Flask con todos los parámetros de la transacción.
+    const WOMPI_PARAMS_JSON = '{{ wompi_params | default("", true) | safe }}'; 
+    //
+
     document.addEventListener('DOMContentLoaded', function() {
-        const creatorSelect = document.getElementById('creator_id');
-        const gameSelect = document.getElementById('game_id');
+        if (WOMPI_PARAMS_JSON) {
+            try {
+                // Parsear el objeto JSON de Wompi.
+                const wompiParams = JSON.parse(WOMPI_PARAMS_JSON);
+                
+                // 2. Crear y Abrir el Widget de Wompi.
+                // Esta función crea la ventana emergente (Pasarela de Pago).
+                var checkout = new WidgetCheckout({
+                    currency: 'COP', // Moneda: COP (Peso colombiano)
+                    amountInCents: wompiParams.amountInCents, // Monto en centavos
+                    reference: wompiParams.reference, // Referencia única de la transacción
+                    publicKey: wompiParams.publicKey, // Llave pública del comercio
+                    signature: wompiParams.signature, // Firma de integridad (generada en el backend)
+                    redirectUrl: wompiParams.redirectUrl, // URL a la que se redirige después del pago
 
-        // Si se selecciona un juego, deselecciona el creador y viceversa
-        gameSelect.addEventListener('change', function() {
-            if (this.value) {
-                creatorSelect.value = ''; // Deselecciona el creador si se elige un juego
+                    // Parámetros opcionales que puedes haber incluido
+                    taxInCents: wompiParams.taxInCents,
+                    customerData: wompiParams.customerData
+                });
+                
+                // 3. Abrir la ventana de pago (Widget)
+                checkout.open(function (result) {
+                    // Esta función se ejecuta si Wompi intenta responder por callback (Opcional, 
+                    // la redirección a redirectUrl es el método principal de respuesta)
+                });
+
+            } catch (e) {
+                console.error("Error al parsear parámetros de Wompi:", e);
             }
-        });
-
-        creatorSelect.addEventListener('change', function() {
-            if (this.value) {
-                gameSelect.value = ''; // Deselecciona el juego si se elige un creador
-            }
-        });
-
-        // Asegúrate de que el creador del juego seleccionado se muestre
-        {% if preselected_game_id %}
-            const preselectedGameId = '{{ preselected_game_id }}';
-            gameSelect.value = preselectedGameId;
-        {% elif preselected_creator_id %}
-            const preselectedCreatorId = '{{ preselected_creator_id }}';
-            creatorSelect.value = preselectedCreatorId;
-        {% endif %}
+        }
     });
 </script>
 {% endblock %}

@@ -24,4 +24,3 @@ EXPOSE 5000
 
 # Comando por defecto para arrancar la app
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
-

@@ -58,10 +58,26 @@ class Donation(db.Model):
     donor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=True)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
- 
+    transaction_ref = db.Column(db.String(100), unique=True, nullable=True) # <-- Columna de Wompi
+    status = db.Column(db.String(20), default='PENDING', nullable=False) # <-- Columna de Wompi
+    
+    
 class PasswordResetToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     token = db.Column(db.String(100), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    expiration = db.Column(db.DateTime, nullable=False, default=lambda: datetime.utcnow() + timedelta(hours=1)) # Token expira en 1 hora
-    user = db.relationship('User', backref=db.backref('reset_tokens', lazy=True))    
+    expiration = db.Column(db.DateTime, nullable=False, default=lambda: datetime.utcnow() + timedelta(hours=1))
+    user = db.relationship('User', backref=db.backref('reset_tokens', lazy=True))
+
+class Notification(db.Model):
+    """Modelo para almacenar los avances y notificaciones publicadas por los Creadores."""
+    __tablename__ = 'notification'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(255), nullable=True) 
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Relación para acceder a los datos del creador que publicó la notificación
+    creator = db.relationship('User', backref=db.backref('notifications_published', lazy=True))
