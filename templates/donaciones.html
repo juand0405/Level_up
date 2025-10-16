@@ -2,78 +2,104 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
+<style>
+.form-container {
+    max-width: 500px;
+    margin: 50px auto;
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+.btn {
+    width: 48%;
+    display: inline-block;
+    text-align: center;
+}
+</style>
+
 <div class="form-container">
- <h2>Realizar Donación</h2>
-<form method="POST"> 
- <div class="form-group"><label for="creator_id">Donar a Creador:</label>
- <select id="creator_id" name="creator_id" class="form-control" required>
- <option value="">Selecciona un creador</option>
+ <h2>💖 Realizar Donación</h2>
 
-{% for creator in creators %}
- <option value="{{ creator.id }}" {% if preselected_creator_id and preselected_creator_id == creator.id|string %}selected{% endif %}>
- {{ creator.username }}
- </option>
- {% endfor %}
- </select>
- </div>
+ <form method="POST"> 
+    <!-- Selección de creador -->
+    <div class="form-group">
+        <label for="creator_id">Donar a Creador:</label>
+        <select id="creator_id" name="creator_id" class="form-control" required>
+            <option value="">Selecciona un creador</option>
+            {% for creator in creators %}
+                <option value="{{ creator.id }}" 
+                    {% if preselected_creator_id and preselected_creator_id == creator.id|string %}selected{% endif %}>
+                    {{ creator.username }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
 
- <div class="form-group">
-    <label for="game_id">Donar por Juego (opcional):</label>
-     <select id="game_id" name="game_id" class="form-control">
-        <option value="">Ninguno</option>
-{% for game in games %}
-    <option value="{{ game.id }}" {% if preselected_game_id and preselected_game_id == game.id|string %}selected{% endif %}>
-        {{ game.name }} (de {{ game.creator.username }})
-        </option>
- {% endfor %}
- </select>
- <small>Si seleccionas un juego, la donación se dirigirá automáticamente a su creador.</small>
- </div>
+    <!-- Selección de juego -->
+    <div class="form-group">
+        <label for="game_id">Donar por Juego (opcional):</label>
+        <select id="game_id" name="game_id" class="form-control">
+            <option value="">Ninguno</option>
+            {% for game in games %}
+                <option value="{{ game.id }}" 
+                    {% if preselected_game_id and preselected_game_id == game.id|string %}selected{% endif %}>
+                    {{ game.name }} (de {{ game.creator.username }})
+                </option>
+            {% endfor %}
+        </select>
+        <small>Si seleccionas un juego, la donación se dirigirá automáticamente a su creador.</small>
+    </div>
 
-<div class="form-group">
- <label for="amount">Monto de la Donación (COP):</label>
- <input type="number" id="amount" name="amount" step="100" min="100" class="form-control" required>
- </div>
- <button type="submit" class="btn btn-primary">Pagar y Donar</button>
- <a href="{{ url_for('home_usuario') }}" class="btn btn-secondary">Cancelar</a>     </form>
+    <!-- Monto -->
+    <div class="form-group">
+        <label for="amount">Monto de la Donación (COP):</label>
+        <input type="number" id="amount" name="amount" step="100" min="100" class="form-control" required>
+    </div>
+
+    <div style="display:flex; justify-content:space-between;">
+        <button type="submit" class="btn btn-primary">Pagar y Donar</button>
+        <a href="{{ url_for('home_usuario') }}" class="btn btn-secondary">Cancelar</a>
+    </div>
+ </form>
 </div>
 
-<script type="text/javascript" src="https://checkout.wompi.co/widget.js" ></script>
+<!-- Script oficial de Wompi -->
+<script type="text/javascript" src="https://checkout.wompi.co/widget.js"></script>
 
 <script>
-     // 1. Obtener el JSON de Flask con todos los parámetros de la transacción.
-    const WOMPI_PARAMS_JSON = '{{ wompi_params | default("", true) | safe }}'; 
-    //
+    // Recibe el JSON desde Flask (más seguro con 'tojson')
+    const wompiParams = {{ wompi_params | tojson | safe }};
 
     document.addEventListener('DOMContentLoaded', function() {
-        if (WOMPI_PARAMS_JSON) {
+        if (wompiParams && Object.keys(wompiParams).length > 0) {
             try {
-                // Parsear el objeto JSON de Wompi.
-                const wompiParams = JSON.parse(WOMPI_PARAMS_JSON);
-                
-                // 2. Crear y Abrir el Widget de Wompi.
-                // Esta función crea la ventana emergente (Pasarela de Pago).
-                var checkout = new WidgetCheckout({
-                    currency: 'COP', // Moneda: COP (Peso colombiano)
-                    amountInCents: wompiParams.amountInCents, // Monto en centavos
-                    reference: wompiParams.reference, // Referencia única de la transacción
-                    publicKey: wompiParams.publicKey, // Llave pública del comercio
-                    signature: wompiParams.signature, // Firma de integridad (generada en el backend)
-                    redirectUrl: wompiParams.redirectUrl, // URL a la que se redirige después del pago
-
-                    // Parámetros opcionales que puedes haber incluido
-                    taxInCents: wompiParams.taxInCents,
-                    customerData: wompiParams.customerData
+                // Crea el widget del pago
+                const checkout = new WidgetCheckout({
+                    currency: 'COP',
+                    amountInCents: wompiParams.amountInCents,
+                    reference: wompiParams.reference,
+                    publicKey: wompiParams.publicKey,
+                    signature: wompiParams.signature,
+                    redirectUrl: wompiParams.redirectUrl,
+                    customerData: wompiParams.customerData || {}
                 });
-                
-                // 3. Abrir la ventana de pago (Widget)
+
+                // Abre el popup de pago
                 checkout.open(function (result) {
-                    // Esta función se ejecuta si Wompi intenta responder por callback (Opcional, 
-                    // la redirección a redirectUrl es el método principal de respuesta)
+                    console.log("Resultado del pago:", result);
+
+                    // Limpia el estado del navegador (evita doble apertura al recargar)
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 });
 
-            } catch (e) {
-                console.error("Error al parsear parámetros de Wompi:", e);
+            } catch (error) {
+                console.error("Error al inicializar el pago Wompi:", error);
             }
         }
     });
